@@ -3,12 +3,13 @@
 //
 
 window.onload = function () {
-    var filePath = '../data/data.tsv';
+    var filePath = '../data/diffData.tsv';
     var data = getObjectFromTSV(getFileData(filePath));
+    console.log(data)
 
-    var margin = 1,
-        width  = 1000 - margin,
-        height = 1000 - margin;
+    var margin = 50,
+        width  = 400 - margin,
+        height = 400 - margin;
 
     var svg = d3.select("body")
         .append("svg")
@@ -120,7 +121,8 @@ function getFileData (filePath) {
 }
 
 function getObjectFromTSV (tsvString) {
-    var array = _(tsvString.split('\r\n'))
+//  var array = _(tsvString.split('\r\n'))
+    var array = _(tsvString.split('\n'))
             .chain()
             .initial()
             .map(function (str) { return str.split('\t'); })

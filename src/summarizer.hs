@@ -1,5 +1,6 @@
 import System.Random
 import System.IO
+import Data.String
 
 rand :: IO Int
 rand = getStdRandom (randomR (0, 1))
@@ -7,23 +8,72 @@ rand = getStdRandom (randomR (0, 1))
 randomInt :: RandomGen g => g -> Int
 randomInt gen = fst $ random gen
 
-main :: IO ()
-main = do
-        outputFile <- openFile "../data/data.tsv" WriteMode
+-- raw data
+mkRawData :: IO ()
+mkRawData = do
+        outputFile <- openFile "../data/rawData.tsv" WriteMode
         let startTime  = 20131130090000
-            intervals  = map (+startTime) [2,4..10000]
-            randomvals = take 5000 $ randomRs (1,10) (mkStdGen 99) :: [Int]
-            outputList = zipWith (\x y -> show x ++ "\t" ++ show y) intervals randomvals
+            intervals  = map (+startTime) [2,4..1000]
+            randomvals = take 500 $ randomRs (1,10) (mkStdGen 99) :: [Int]
+            outputList = zipWith tabJoin intervals randomvals
         hPutStrLn outputFile ("time" ++ "\t" ++ "count")
-        mainloop outputList outputFile
+        mkRawDataLoop outputList outputFile
         hClose outputFile
 
-mainloop :: [String] -> Handle -> IO ()
-mainloop []     _   = return ()
-mainloop (x:xs) out = do
+mkRawDataLoop :: [String] -> Handle -> IO ()
+mkRawDataLoop []     _   = return ()
+mkRawDataLoop (x:xs) out = do
                        hPutStrLn out x
-                       mainloop xs out
+                       mkRawDataLoop xs out
 
+-- diff data
+mkDiffData :: IO ()
+mkDiffData = transformFile mkDiff "../data/rawData.tsv" "../data/diffData.tsv"
+
+mkDiff :: [String] -> [String]
+mkDiff (firstLine:restLines) = firstLine : (differ restLines)
+    where
+        differ []     = []
+        differ [line] = []
+        differ (current:next:rest) = tabJoin diffX diffY : differ rest
+            where
+                [currX, currY] = tsvLineToInteger current
+                [nextX, nextY] = tsvLineToInteger next
+                diffX = currX
+                diffY = (nextY - currY) `div` (nextX - currX)
+
+mkMaxData :: IO ()
+mkMaxData = transformFile mkMax "../data/rawData.tsv" "../data/maxData.tsv"
+
+-- mkAveData :: IO ()
+-- mkAveData = interact (unlines . mkAve . lines)
+
+-- UTILITY
+
+transformFile :: ([String] -> [String]) -> FilePath -> FilePath -> IO ()
+transformFile f inputPath outputPath = do
+    string <- readFile inputPath
+    writeFile outputPath $ (unlines . f . lines) string
+
+splitBy :: Eq a => [a] -> [a] -> [[a]]
+splitBy _  []     = []
+splitBy as xs = y : splitBy as ys
+    where
+        y  = takeWhile (\x -> not $ elem x as) xs
+        ys = drop 1 $ dropWhile (\x -> not $ elem x as) xs
+
+tabSplit = splitBy "\t"
+tsvLineToFloat line = map (\str -> read str :: Float) (tabSplit line)
+tsvLineToInteger line = map (\str -> read str :: Integer) (tabSplit line)
+tabJoin x y = show x ++ "\t" ++ show y
+
+
+-- wave pattern -> count
+
+-- count data
+-- max data
+
+-- 
 -- newtype State s a = State {
 --                     runState :: s -> (a, s)
 --                     }
